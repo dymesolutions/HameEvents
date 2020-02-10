@@ -8,13 +8,22 @@ from django.contrib.auth import get_user_model
 
 from .permissions import UserModelPermissionMixin
 
+from django.conf import settings
 
 class ApiKeyAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         # django converts 'apikey' to 'HTTP_APIKEY' outside runserver
         api_key = request.META.get('apikey') or request.META.get('HTTP_APIKEY')
+
         if not api_key:
-            return None
+            if request.method == 'POST' or request.method == 'PUT' or request.method == 'DELETE':
+                if getattr(settings, 'USE_DEFAULT_API_KEY', False) == True:
+                    api_key = getattr(settings, 'DEFAULT_API_KEY', None)
+                else:
+                    return None
+            else:
+                return None
+
         data_source = self.get_data_source(api_key=api_key)
         user = ApiKeyUser.objects.get_or_create(data_source=data_source)[0]
         return user, ApiKeyAuth(data_source)
