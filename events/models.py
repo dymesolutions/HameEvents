@@ -584,6 +584,12 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     keywords = models.ManyToManyField(Keyword, related_name='events')
     audience = models.ManyToManyField(Keyword, related_name='audience_events', blank=True)
 
+    # Tavastia Events
+    pin = models.CharField(blank=False, max_length=64, default='0000')
+    accessible = models.BooleanField(default=False, null=False, blank=False)
+    provider_email = models.EmailField(null=True, blank=True, default='admin@tavastiaevents.fi')
+    multi_day = models.BooleanField(default=False, null=False)
+
     class Meta:
         verbose_name = _('event')
         verbose_name_plural = _('events')
@@ -727,6 +733,11 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             if admin.email:
                 recipient_list.append(admin.email)
         self._send_notification(NotificationType.DRAFT_POSTED, recipient_list, request)
+
+    # Tavastia Events
+    # Filter soft deleted events from events sub events
+    def filter_deleted(self):
+        return self.sub_events.filter(deleted=False)
 
 
 reversion.register(Event)
