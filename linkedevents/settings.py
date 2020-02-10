@@ -56,13 +56,15 @@ env = environ.Env(
     SENTRY_ENVIRONMENT=(str, 'development'),
     COOKIE_PREFIX=(str, 'linkedevents'),
     INTERNAL_IPS=(list, []),
-    INSTANCE_NAME=(str, 'Linked Events'),
-    EXTRA_INSTALLED_APPS=(list, []),
+    INSTANCE_NAME=(str, 'Tavastia Events'),
+    EXTRA_INSTALLED_APPS=(list, ['tavastiaevents']),
     AUTO_ENABLED_EXTENSIONS=(list, []),
     MAIL_MAILGUN_KEY=(str, ''),
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
-    LIPPUPISTE_EVENT_API_URL=(str, None)
+    LIPPUPISTE_EVENT_API_URL=(str, None),
+    USE_DEFAULT_API_KEY=(bool, True),
+    DEFAULT_API_KEY=(str, 'tavastiaevents'),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -319,9 +321,12 @@ TEMPLATES = [
 
 POSTGIS_VERSION = (2, 1, 1)
 
-# Use ETRS-TM35FIN projection by default
-PROJECTION_SRID = 3067
-# Bounding box of Finland and then some
+# Tavastia Events default projection
+PROJECTION_SRID = 4326
+
+# # Use ETRS-TM35FIN projection by default
+# PROJECTION_SRID = 3067
+# # Bounding box of Finland and then some
 
 BOUNDING_BOX = [-548576, 6291456, 1548576, 8388608]
 
@@ -409,7 +414,7 @@ for language in [l[0] for l in LANGUAGES]:
 
 
 import bleach  # noqa
-BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "br"]
+BLEACH_ALLOWED_TAGS = bleach.ALLOWED_TAGS + ["p", "div", "tr", "td", "th", "table"]
 
 from easy_thumbnails.conf import Settings as thumbnail_settings  # noqa
 THUMBNAIL_PROCESSORS = (
@@ -423,6 +428,10 @@ AUTO_ENABLED_EXTENSIONS = env('AUTO_ENABLED_EXTENSIONS')
 
 # shown in the browsable API
 INSTANCE_NAME = env('INSTANCE_NAME')
+
+# Tavastia Events
+USE_DEFAULT_API_KEY = env('USE_DEFAULT_API_KEY')
+DEFAULT_API_KEY = env('DEFAULT_API_KEY')
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
