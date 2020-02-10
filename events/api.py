@@ -68,6 +68,9 @@ from events.translation import EventTranslationOptions
 from helevents.models import User
 from events.renderers import DOCXRenderer
 
+# Tavastia events
+from drf_extra_fields.geo_fields import PointField
+from django.utils.crypto import get_random_string
 
 def get_view_name(view):
     if type(view) is APIRootView:
@@ -198,7 +201,7 @@ def clean_text_fields(data, allowed_html_fields=[]):
             for field_name in allowed_html_fields:
                 # check all languages and the default translation field too
                 if k.startswith(field_name):
-                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS)
+                    data[k] = bleach.clean(v, settings.BLEACH_ALLOWED_TAGS, strip=True)
                     break
             else:
                 data[k] = bleach.clean(v)
@@ -874,6 +877,7 @@ class PlaceSerializer(LinkedEventsSerializer, GeoModelSerializer):
     divisions = DivisionSerializer(many=True, read_only=True)
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
+    user = None
 
     class Meta:
         model = Place
@@ -893,46 +897,183 @@ class PlaceFilter(django_filters.rest_framework.FilterSet):
         return filter_division(queryset, name, value)
 
 
-class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
-                           viewsets.GenericViewSet,
-                           mixins.RetrieveModelMixin):
+# class PlaceRetrieveViewSet(JSONAPIViewMixin, GeoModelAPIView,
+#                            viewsets.GenericViewSet,
+#                            mixins.RetrieveModelMixin):
+#     queryset = Place.objects.all()
+#     queryset = queryset.select_related('publisher')
+#     serializer_class = PlaceSerializer
+
+#     def retrieve(self, request, *args, **kwargs):
+#         try:
+#             place = Place.objects.get(pk=kwargs['pk'])
+#         except Place.DoesNotExist:
+#             raise Http404()
+#         if place.deleted:
+#             if place.replaced_by:
+#                 place = place.get_replacement()
+#                 return HttpResponsePermanentRedirect(reverse('place-detail',
+#                                                              kwargs={'pk': place.pk},
+#                                                              request=request))
+#         return super().retrieve(request, *args, **kwargs)
+
+
+# class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
+#                        viewsets.GenericViewSet,
+#                        mixins.ListModelMixin):
+#     queryset = Place.objects.all()
+#     queryset = queryset.select_related('publisher')
+#     serializer_class = PlaceSerializer
+#     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
+#     filterset_class = PlaceFilter
+#     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
+#     ordering = ('-n_events', '-data_source', 'name')  # we want to display tprek before osoite etc.
+
+#     def get_queryset(self):
+#         """
+#         Return Place queryset.
+
+#         If the request has no filter parameters, we only return places that meet the following criteria:
+#         -the place has events
+#         -the place is not deleted
+
+#         Supported places filtering parameters:
+#         data_source (only places with the given data sources are included)
+#         filter (only places containing the specified string are included)
+#         show_all_places (places without events are included)
+#         show_deleted (deleted places are included)
+#         """
+#         queryset = Place.objects.prefetch_related('divisions__type', 'divisions__municipality')
+#         data_source = self.request.query_params.get('data_source')
+#         # Filter by data source, multiple sources separated by comma
+#         if data_source:
+#             data_source = data_source.lower().split(',')
+#             queryset = queryset.filter(data_source__in=data_source)
+#         if not self.request.query_params.get('show_all_places'):
+#             queryset = queryset.filter(n_events__gt=0)
+#         if not self.request.query_params.get('show_deleted'):
+#             queryset = queryset.filter(deleted=False)
+
+#         # Optionally filter places by filter parameter,
+#         # can be used e.g. with typeahead.js
+#         # match to street as well as name, to make it easier to find units by address
+#         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
+#         if val:
+#             if u'\x00' in val:
+#                 raise ParseError("A string literal cannot contain NUL (0x00) characters.")
+#             qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
+#             queryset = queryset.filter(qset)
+#         return queryset
+
+
+# register_view(PlaceRetrieveViewSet, 'place')
+# register_view(PlaceListViewSet, 'place')
+
+class PlaceCreateSerializer(TranslatedModelSerializer):
+    view_name = 'place-detail'
+
+    id = serializers.CharField(required=False, allow_null=True)
+    data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
+                                                     required=False, allow_null=True)
+    publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
+                                                   required=False, allow_null=True)
+    name = serializers.CharField(required=False)
+    address_locality = serializers.CharField(required=True, allow_null=False)
+    street_address = serializers.CharField(required=True, allow_null=False)
+    position = PointField()
+    #origin_id = serializers.CharField(required=False, allow_null=True)
+
+    class Meta:
+        model = Place
+        exclude = ['deleted', 'origin_id']
+
+    def validate(self, data):
+        errors = {}
+
+        if 'address_locality' not in data:
+            errors['address_locality'] = _('Address locality must be specified')
+
+        if 'street_address' not in data:
+            errors['street_address'] = _('Street address is required')
+
+        if 'position' not in data:
+            errors['position'] = _('Coordinates are required')
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        # clean all text fields, only description may contain any html
+        data = clean_text_fields(data)
+
+        if 'name_fi' not in data:
+            if 'street_address_fi' in data:
+                data['name_fi'] = data['street_address_fi'] + ", " + data['address_locality_fi']
+        elif 'name_fi' in data:
+            if data['name_fi'] is not None and data['name_fi'] != "":
+                data['name_fi'] = data['name_fi'] + ", " + data['street_address_fi'] + ", " + data['address_locality_fi']
+            else:
+                data['name_fi'] = data['street_address_fi'] + ", " + data['address_locality_fi']
+
+        if 'name_sv' not in data:
+            if 'street_address_sv' in data:
+                data['name_sv'] = data['street_address_sv'] + ", " + data['address_locality_sv']
+        elif 'name_sv' in data:
+            if data['name_sv'] is not None and data['name_sv'] != "":
+                data['name_sv'] = data['name_sv'] + ", " + data['street_address_sv'] + ", " + data['address_locality_sv']
+            else:
+                data['name_sv'] = data['street_address_sv'] + ", " + data['address_locality_sv']
+
+        if 'name_en' not in data:
+            if 'street_address_en' in data:
+                data['name_en'] = data['street_address_en'] + ", " + data['address_locality_en']
+        elif 'name_en' in data:
+            if data['name_en'] is not None and data['name_en'] != "":
+                data['name_en'] = data['name_en'] + ", " + data['street_address_en'] + ", " + data['address_locality_en']
+            else:
+                data['name_en'] = data['street_address_en'] + ", " + data['address_locality_en']
+            
+        return data
+
+
+    def create(self, validated_data):
+        # if id was not provided, we generate it upon creation:
+        if 'id' not in validated_data:
+            validated_data['id'] = get_random_string(length=16, allowed_chars='0123456789')
+
+        if 'data_source' not in validated_data:
+            validated_data['data_source'] = DataSource.objects.get(id='tavastiaevents')
+
+        if 'publisher' not in validated_data:
+            validated_data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
+
+        place = super().create(validated_data)
+
+        return place
+
+class PlaceModelViewSet(viewsets.ModelViewSet):
     queryset = Place.objects.all()
     queryset = queryset.select_related('publisher')
     serializer_class = PlaceSerializer
-
-    def retrieve(self, request, *args, **kwargs):
-        try:
-            place = Place.objects.get(pk=kwargs['pk'])
-        except Place.DoesNotExist:
-            raise Http404()
-        if place.deleted:
-            if place.replaced_by:
-                place = place.get_replacement()
-                return HttpResponsePermanentRedirect(reverse('place-detail',
-                                                             kwargs={'pk': place.pk},
-                                                             request=request))
-        return super().retrieve(request, *args, **kwargs)
-
-
-class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
-                       viewsets.GenericViewSet,
-                       mixins.ListModelMixin):
-    queryset = Place.objects.all()
-    queryset = queryset.select_related('publisher')
-    serializer_class = PlaceSerializer
+    #filter_backends = (filters.DjangoFilterBackend, filters.OrderingFilter)
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend, filters.OrderingFilter)
-    filterset_class = PlaceFilter
+    filter_class = PlaceFilter
     ordering_fields = ('n_events', 'id', 'name', 'data_source', 'street_address', 'postal_code')
-    ordering = ('-n_events', '-data_source', 'name')  # we want to display tprek before osoite etc.
+    ordering = ('-n_events',)
+    http_method_names = ['get', 'post', 'head']
+
+    def get_serializer_class(self):
+        serializer_class = self.serializer_class
+
+        if self.request.method == 'POST':
+            serializer_class = PlaceCreateSerializer
+        return serializer_class
 
     def get_queryset(self):
         """
         Return Place queryset.
-
         If the request has no filter parameters, we only return places that meet the following criteria:
         -the place has events
         -the place is not deleted
-
         Supported places filtering parameters:
         data_source (only places with the given data sources are included)
         filter (only places containing the specified string are included)
@@ -952,19 +1093,25 @@ class PlaceListViewSet(JSONAPIViewMixin, GeoModelAPIView,
 
         # Optionally filter places by filter parameter,
         # can be used e.g. with typeahead.js
-        # match to street as well as name, to make it easier to find units by address
         val = self.request.query_params.get('text') or self.request.query_params.get('filter')
         if val:
-            if u'\x00' in val:
-                raise ParseError("A string literal cannot contain NUL (0x00) characters.")
-            qset = _text_qset_by_translated_field('name', val) | _text_qset_by_translated_field('street_address', val)
-            queryset = queryset.filter(qset)
+            #queryset = queryset.filter(name__icontains=val)
+            queryset = queryset.filter(_text_qset_by_translated_field('name', val))
         return queryset
 
+    def get_serializer_context(self):
+        context = super(PlaceModelViewSet, self).get_serializer_context()
+        context.setdefault('skip_fields', set()).add('origin_id')
+        return context
 
-register_view(PlaceRetrieveViewSet, 'place')
-register_view(PlaceListViewSet, 'place')
+    def perform_destroy(self, instance):
+        raise DRFPermissionDenied(_('Deleting a place is forbidden'))
 
+    def perform_update(self, instance):
+        raise DRFPermissionDenied(_('Updating a place is forbidden'))
+
+
+register_view(PlaceModelViewSet, 'place')
 
 class OpeningHoursSpecificationSerializer(LinkedEventsSerializer):
     class Meta:
@@ -1184,7 +1331,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                                    required=False)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
-                                    many=True, queryset=Event.objects.filter(deleted=False))
+                                    many=True, queryset=Event.objects.filter(deleted=False), source='filter_deleted')
     images = JSONLDRelatedField(serializer=ImageSerializer, required=False, allow_null=True, many=True,
                                 view_name='image-detail', queryset=Image.objects.all(), expanded=True)
     videos = VideoSerializer(many=True, required=False)
@@ -1194,7 +1341,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                                   many=True, required=False, queryset=Keyword.objects.filter(deprecated=False))
 
     view_name = 'event-detail'
-    fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description', 'description')
+    fields_needed_to_publish = ('keywords', 'location', 'start_time', 'short_description') # , 'description')
     created_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     last_modified_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     date_published = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
@@ -1202,6 +1349,12 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     end_time = DateTimeField(default_timezone=pytz.UTC, required=False, allow_null=True)
     created_by = serializers.StringRelatedField(required=False, allow_null=True)
     last_modified_by = serializers.StringRelatedField(required=False, allow_null=True)
+
+    # Tavastia Events
+    pin = serializers.CharField(required=True, write_only=True)
+    accessible = serializers.BooleanField(required=True)
+    provider_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True, write_only=True)
+
 
     def __init__(self, *args, skip_empties=False, **kwargs):
         super(EventSerializer, self).__init__(*args, **kwargs)
@@ -1260,6 +1413,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         data = super().validate(data)
 
+        # Tavastia Events default data_source and publisher
+        if 'data_source' not in data:
+            data['data_source'] = DataSource.objects.get(id='tavastiaevents')
+
+        if 'publisher' not in data:
+            data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
+
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
@@ -1280,9 +1440,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                     field_lang = "%s_%s" % (field, lang)
                     if data.get(name) and not data.get(field_lang):
                         errors.setdefault(field, {})[lang] = lang_error_msg
-                    if data.get(field_lang) and field == 'short_description' and len(data.get(field_lang, [])) > 160:
+                    if data.get(field_lang) and field == 'short_description' and len(data.get(field_lang, [])) > 140:
                         errors.setdefault(field, {})[lang] = (
-                            _('Short description length must be 160 characters or less'))
+                            _('Short description length must be 140 characters or less'))
 
             elif not data.get(field):
                 # The start time may be null to postpone an already published event
@@ -1311,6 +1471,20 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         for index, video in enumerate(data.get('video', [])):
             # clean link text fields
             data['video'][index] = clean_text_fields(video)
+
+        # Tavastia Events 
+        if 'end_time' in data:
+            end = data.get('end_time')
+            #end = datetime.strptime(end, "%Y-%m-%dT%H:%M:%SZ")
+
+            start = data.get('start_time')
+            #start = datetime.strptime(start, "%Y-%m-%dT%H:%M:%SZ")
+
+            if end is not None and start is not None:
+                if end.date() > start.date():
+                    data['multi_day'] = True
+                else:
+                    data['multi_day'] = False
 
         # If no end timestamp supplied, we treat the event as ending at midnight
         if not data.get('end_time'):
@@ -1345,6 +1519,29 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
+
+        if 'image' not in validated_data:
+            try:
+                autumn = ['09', '9', '10', '11']
+                winter = ['12', '01', '1', '02', '2']
+                spring = ['03', '3', '04', '4', '05', '5']
+                summer = ['06', '6', '07', '7', '08', '8']
+
+                split_string = validated_data['start_time']#.split('-')
+                month_number = str(split_string.month)
+
+                if month_number in autumn:
+                    validated_data['image'] = Image.objects.get(id=4089)
+                elif month_number in winter:
+                    validated_data['image'] = Image.objects.get(id=2570)
+                elif month_number in spring:
+                    validated_data['image'] = Image.objects.get(id=3387)
+                else:
+                    validated_data['image'] = Image.objects.get(id=4090)
+
+            except Image.DoesNotExist:
+                pass
+
 
         offers = validated_data.pop('offers', [])
         links = validated_data.pop('external_links', [])
@@ -1384,6 +1581,10 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         offers = validated_data.pop('offers', None)
         links = validated_data.pop('external_links', None)
         videos = validated_data.pop('videos', None)
+
+        # Tavastia Events, Check if password is correct
+        if instance.pin != validated_data['pin']:
+            raise DRFPermissionDenied(_('Incorrect PIN.'))
 
         if instance.end_time and instance.end_time < timezone.now():
             raise DRFPermissionDenied(_('Cannot edit a past event.'))
@@ -1746,6 +1947,56 @@ def _filter_event_queryset(queryset, params, srs=None):
             raise ParseError(_('Audience maximum age must be a digit.'))
         queryset = queryset.filter(audience_max_age__gte=max_age)
 
+    # Tavastia Events
+    # Filter by provider, case insensitive, exact match
+    val = params.get('provider', None)
+    if val:
+        val.lower()
+        fields = EventTranslationOptions.fields
+        qset = Q()
+
+        for field in fields:
+            if field == 'provider':
+                qset |= _text_qset_by_translated_field(field, val)
+
+        queryset = queryset.filter(qset)
+
+    # Filter only by keywords 
+    val = params.get('keywords', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(Q(keywords__pk__in=val)).distinct()
+        # if keyword:
+        #   raise ValidationError(_(''Keyword search can\'t be used together with keywords.))
+
+    # Filter only by audience
+    val = params.get('audience', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(Q(audience__pk__in=val)).distinct()
+
+    # Filter by postal_code
+    val = params.get('postal_code', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__postal_code__in=val)
+
+    # API Exception for multi day search
+    class InvalidMultiDayParametersException(APIException):
+        status_code = 400
+        default_detail = 'Correct choices are True or False'
+        default_code = 'choices'
+
+    # Filter by event multi day status
+    val = params.get('multi_day', None)
+    if val:
+        val = val.capitalize()
+        propers = ['False', 'True']
+        if val not in propers:
+            raise InvalidMultiDayParametersException()
+        queryset = queryset.filter(multi_day=val)
+
+
     return queryset
 
 
@@ -1981,6 +2232,9 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
     def perform_destroy(self, instance):
         if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
             raise DRFPermissionDenied()
+        # Tavastia Events, Check if password is correct
+        if instance.pin != self.request.POST.get('pin', None):
+            raise DRFPermissionDenied(_('Incorrect PIN.'))
         instance.soft_delete()
 
     def retrieve(self, request, *args, **kwargs):
