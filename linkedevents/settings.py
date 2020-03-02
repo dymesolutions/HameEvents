@@ -432,6 +432,7 @@ INSTANCE_NAME = env('INSTANCE_NAME')
 # Tavastia Events
 USE_DEFAULT_API_KEY = env('USE_DEFAULT_API_KEY')
 DEFAULT_API_KEY = env('DEFAULT_API_KEY')
+DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
