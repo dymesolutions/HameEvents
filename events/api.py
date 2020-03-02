@@ -1423,6 +1423,28 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
 
+        # Tavastia Events description and default language
+        if 'description' not in data:
+            data['description'] = data['short_description']
+
+        if 'description_fi' not in data:
+            if 'short_description_fi' in data:
+                data['description_fi'] = data['short_description_fi']
+
+        if 'description_sv' not in data:
+            if 'short_description_sv' in data:
+                data['description_sv'] = data['short_description_sv']
+
+        if 'description_en' not in data:
+            if 'short_description_en' in data:
+                data['description_en'] = data['short_description_en']
+
+        if 'in_language' not in data:
+            data['in_language'] = []
+            data['in_language'].append(Language.objects.get(id='fi'))
+        elif data['in_language'] == []:
+            data['in_language'].append(Language.objects.get(id='fi'))
+
         # if the event is a draft, no further validation is performed
         if data['publication_status'] == PublicationStatus.DRAFT:
             data = self.run_extension_validations(data)
