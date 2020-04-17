@@ -1,3 +1,21 @@
+# Tavastia Events
+
+## Project AvoinHäme
+
+The goal of the project is to create knowledge and skills related to open data in Tavastia Proper's businesses and public organizations. Thus creating conditions for the utilization of open data in their activities.
+
+Target groups of the project are the businesses and public organizations. Focus areas are travel and event production, traffic and logistics and bioeconomy. Despite the focus areas, everyone interested in open data are welcome to hear more.
+
+Primary financier: Regional Council of Häme / Helsinki-Uusimaa Regional Counsil (European Regional Development Fund)
+
+Municipality financiers: Hämeenlinna, Riihimäki, Forssa
+
+AvoinHäme-project web page: https://avoinhäme.fi
+
+## Tavastia Events and Linked Events
+
+Tavastia Events is a modified version of the Linked Events. It has few differences related to users and event data.
+
 # Linked Events
 
 [![Build status](https://travis-ci.org/City-of-Helsinki/linkedevents.svg)](https://travis-ci.org/City-of-Helsinki/linkedevents)
@@ -246,3 +264,77 @@ To implement an extension:
 6) If you want to force the extension to be enabled on every request, add the extension's identifier to `AUTO_ENABLED_EXTENSIONS` in Django settings.
 
 For an example extension implementation, see [course extension](extension_course).
+
+## Tavastia Events additions
+
+Installing the Tavastia events browsable API templates
+
+```python
+cd $INSTALL_BASE/linkedevents
+python manage.py install_templates tavastiaevents
+This will install the tavastiaevents/templates/rest_framework/api.html template
+```
+
+Images in the API
+Images POSTed to the API will be saved to a Microsoft Azure Blob storage, which has the region set to North Europe
+
+Add your Azure account settings to use the image storage
+
+```python
+MEDIA_URL = ""
+AZURE_ACCOUNT_NAME = ""
+AZURE_ACCOUNT_KEY = ""
+AZURE_CONTAINER = ""
+```
+
+Extra functions of Tavastia Events
+Tavastia Events contains three extra functions:
+
+### A way to report errors in event data
+
+Notification email will be sent to event organizer and admin
+
+Request needs to contain the following:
+
+* `message_code`
+* `event_id`
+
+
+Optional message related to the report
+
+* `message`
+
+### A way to report inapproriate event
+
+Notification email will be sent to admin
+
+Request needs to contain the following:
+
+* `message_code`
+* `event_id`
+
+
+Optional message related to the report
+
+* `message`
+
+### A way to request a forgotten password
+
+Notification email will be sent to event organizer and admin
+
+Request needs to contain the following:
+
+* `message_code`
+* `event_id`
+
+More information is found in the Tavastia Events browsable API
+
+Add your email settings to use the feature
+
+```python
+EMAIL_HOST = ''
+EMAIL_PORT = ''
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_USE_TLS = True
+```
