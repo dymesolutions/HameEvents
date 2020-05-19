@@ -215,7 +215,7 @@ class BaseModel(models.Model):
 
     id = models.CharField(max_length=100, primary_key=True)
     data_source = models.ForeignKey(
-        DataSource, on_delete=models.CASCADE, related_name='provided_%(class)s_data', db_index=True)
+        DataSource, on_delete=models.CASCADE, related_name='provided_%(class)s_data', db_index=True, null=True)
 
     # Properties from schema.org/Thing
     name = models.CharField(verbose_name=_('Name'), max_length=255, db_index=True)
@@ -382,7 +382,7 @@ class Place(MPTTModel, BaseModel, SchemalessFieldMixin, ImageMixin, ReplacedByMi
     geo_objects = objects
 
     publisher = models.ForeignKey(
-        'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'), db_index=True)
+        'django_orghierarchy.Organization', on_delete=models.CASCADE, verbose_name=_('Publisher'), db_index=True, null=True)
     info_url = models.URLField(verbose_name=_('Place home page'), null=True, blank=True, max_length=1000)
     description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True,
@@ -539,7 +539,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
     provider_contact_info = models.CharField(verbose_name=_("Provider's contact info"),
                                              max_length=255, null=True, blank=True)
     publisher = models.ForeignKey('django_orghierarchy.Organization', verbose_name=_('Publisher'), db_index=True,
-                                  on_delete=models.PROTECT, related_name='published_events')
+                                  on_delete=models.PROTECT, related_name='published_events', null=True)
 
     # Status of the event itself
     event_status = models.SmallIntegerField(verbose_name=_('Event status'), choices=STATUSES,

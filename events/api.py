@@ -1542,7 +1542,7 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         if 'id' not in validated_data:
             validated_data['id'] = generate_id(self.data_source)
 
-        if 'image' not in validated_data:
+        if 'images' not in validated_data:
             try:
                 autumn = ['09', '9', '10', '11']
                 winter = ['12', '01', '1', '02', '2']
@@ -1553,13 +1553,13 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 month_number = str(split_string.month)
 
                 if month_number in autumn:
-                    validated_data['image'] = Image.objects.get(id=4089)
+                    validated_data['images'] = Image.objects.get(id=4089)
                 elif month_number in winter:
-                    validated_data['image'] = Image.objects.get(id=2570)
+                    validated_data['images'] = Image.objects.get(id=2570)
                 elif month_number in spring:
-                    validated_data['image'] = Image.objects.get(id=3387)
+                    validated_data['images'] = Image.objects.get(id=3387)
                 else:
-                    validated_data['image'] = Image.objects.get(id=4090)
+                    validated_data['images'] = Image.objects.get(id=4090)
 
             except Image.DoesNotExist:
                 pass
