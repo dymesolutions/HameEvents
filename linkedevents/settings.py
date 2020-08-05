@@ -37,7 +37,7 @@ def get_git_revision_hash() -> str:
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
-    SYSTEM_DATA_SOURCE_ID=(str, 'system'),
+    SYSTEM_DATA_SOURCE_ID=(str, 'tavastiaevents'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),

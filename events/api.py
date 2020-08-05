@@ -1425,6 +1425,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
         # Tavastia Events description and default language
         if 'description' not in data:
+            if 'short_description' not in data:
+                raise serializers.ValidationError(_('This field is required.'))
             data['description'] = data['short_description']
 
         if 'description_fi' not in data:

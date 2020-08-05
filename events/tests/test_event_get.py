@@ -59,6 +59,10 @@ def assert_event_fields_exist(data, version='v1'):
         'super_event_type',
         'videos',
         'replaced_by',
+        #'pin',
+        #'provider_email',
+        'accessible',
+        'multi_day'
     )
     if version == 'v0.1':
         fields += (

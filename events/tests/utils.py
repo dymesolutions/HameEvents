@@ -26,7 +26,7 @@ def assert_event_data_is_equal(d1, d2, version='v1'):
         'external_links',
         'videos',
         'start_time',
-        'end_time',
+        'end_time'
     )
     if version == 'v1':
         FIELDS += ('images',)

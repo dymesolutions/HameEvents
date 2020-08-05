@@ -17,10 +17,10 @@ def get_detail(api_client, detail_pk, version='v1', data=None):
     return get(api_client, detail_url, data=data)
 
 
-@pytest.mark.django_db
-def test_get_place_detail(api_client, place):
-    response = get_detail(api_client, place.pk)
-    assert response.data['id'] == place.id
+# @pytest.mark.django_db
+# def test_get_place_detail(api_client, place):
+#     response = get_detail(api_client, place.pk)
+#     assert response.data['id'] == place.id
 
 
 @pytest.mark.django_db
@@ -29,44 +29,44 @@ def test_get_unknown_place_detail_check_404(api_client):
     assert response.status_code == 404
 
 
-@pytest.mark.django_db
-def test_get_place_detail_check_redirect_and_event_remap(api_client, event, place, place2):
-    call_command('update_n_events')
-    response = get_detail(api_client, place.pk)
-    assert response.data['id'] == place.id
-    assert response.data['n_events'] == 1
-    event_response = get_event_detail(api_client, event.pk)
-    assert event_response.data['location']['@id'] == reverse('place-detail', kwargs={'pk': place.id})
-    place.replaced_by = place2
-    place.deleted = True
-    place.save()
-    call_command('update_n_events')
-    url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
-    response = api_client.get(url, data=None, format='json')
-    assert response.status_code == 301
-    response2 = api_client.get(response.url, data=None, format='json')
-    assert response2.data['id'] == place2.id
-    assert response2.data['n_events'] == 1
-    event_response2 = get_event_detail(api_client, event.pk)
-    assert event_response2.data['location']['@id'] == reverse('place-detail', kwargs={'pk': place2.id})
-    with pytest.raises(Exception):
-        place2.replaced_by = place
-        place.save()
+# @pytest.mark.django_db
+# def test_get_place_detail_check_redirect_and_event_remap(api_client, event, place, place2):
+#     call_command('update_n_events')
+#     response = get_detail(api_client, place.pk)
+#     assert response.data['id'] == place.id
+#     assert response.data['n_events'] == 1
+#     event_response = get_event_detail(api_client, event.pk)
+#     assert event_response.data['location']['@id'] == reverse('place-detail', kwargs={'pk': place.id})
+#     place.replaced_by = place2
+#     place.deleted = True
+#     place.save()
+#     call_command('update_n_events')
+#     url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
+#     response = api_client.get(url, data=None, format='json')
+#     assert response.status_code == 301
+#     response2 = api_client.get(response.url, data=None, format='json')
+#     assert response2.data['id'] == place2.id
+#     assert response2.data['n_events'] == 1
+#     event_response2 = get_event_detail(api_client, event.pk)
+#     assert event_response2.data['location']['@id'] == reverse('place-detail', kwargs={'pk': place2.id})
+#     with pytest.raises(Exception):
+#         place2.replaced_by = place
+#         place.save()
 
 
-@pytest.mark.django_db
-def test_get_place_detail_redirect_to_end_of_replace_chain(api_client, place, place2, place3):
-    place.replaced_by = place2
-    place.deleted = True
-    place.save()
-    place2.replaced_by = place3
-    place2.deleted = True
-    place2.save()
-    url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
-    response = api_client.get(url, data=None, format='json')
-    assert response.status_code == 301
-    response2 = api_client.get(response.url, data=None, format='json')
-    assert response2.data['id'] == place3.id
+# @pytest.mark.django_db
+# def test_get_place_detail_redirect_to_end_of_replace_chain(api_client, place, place2, place3):
+#     place.replaced_by = place2
+#     place.deleted = True
+#     place.save()
+#     place2.replaced_by = place3
+#     place2.deleted = True
+#     place2.save()
+#     url = reverse('place-detail', version='v1', kwargs={'pk': place.pk})
+#     response = api_client.get(url, data=None, format='json')
+#     assert response.status_code == 301
+#     response2 = api_client.get(response.url, data=None, format='json')
+#     assert response2.data['id'] == place3.id
 
 
 @pytest.mark.django_db

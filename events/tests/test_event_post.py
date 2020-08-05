@@ -72,23 +72,23 @@ def test__api_key_with_organization_can_create_an_event(api_client, minimal_even
     assert ApiKeyUser.objects.all().count() == 1
 
 
-@pytest.mark.django_db
-def test__api_key_with_another_organization_can_create_an_event(api_client, minimal_event_dict, data_source,
-                                                                organization, other_data_source, organization2):
+# @pytest.mark.django_db
+# def test__api_key_with_another_organization_can_create_an_event(api_client, minimal_event_dict, data_source,
+#                                                                 organization, other_data_source, organization2):
 
-    data_source.owner = organization
-    data_source.save()
-    other_data_source.owner = organization2
-    other_data_source.save()
+#     data_source.owner = organization
+#     data_source.save()
+#     other_data_source.owner = organization2
+#     other_data_source.save()
 
-    response = create_with_post(api_client, minimal_event_dict, data_source)
-    assert_event_data_is_equal(minimal_event_dict, response.data)
-    assert ApiKeyUser.objects.all().count() == 1
+#     response = create_with_post(api_client, minimal_event_dict, data_source)
+#     assert_event_data_is_equal(minimal_event_dict, response.data)
+#     assert ApiKeyUser.objects.all().count() == 1
 
-    minimal_event_dict['publisher'] = organization2.id
-    response = create_with_post(api_client, minimal_event_dict, other_data_source)
-    assert_event_data_is_equal(minimal_event_dict, response.data)
-    assert ApiKeyUser.objects.all().count() == 2
+#     minimal_event_dict['publisher'] = organization2.id
+#     response = create_with_post(api_client, minimal_event_dict, other_data_source)
+#     assert_event_data_is_equal(minimal_event_dict, response.data)
+#     assert ApiKeyUser.objects.all().count() == 2
 
 
 @pytest.mark.django_db
@@ -180,19 +180,19 @@ def test__cannot_publish_an_event_without_start_time(list_url,
 
 
 @pytest.mark.django_db
-def test__cannot_publish_an_event_without_description(list_url,
+def test__cannot_publish_an_event_without_short_description(list_url,
                                                       api_client,
                                                       minimal_event_dict,
                                                       user):
     api_client.force_authenticate(user=user)
-    minimal_event_dict['description'] = {'fi': None}
+    minimal_event_dict['short_description'] = {'fi': None}
     response = api_client.post(list_url, minimal_event_dict, format='json')
     assert response.status_code == 400
-    assert 'description' in response.data
-    del minimal_event_dict['description']
+    assert 'short_description' in response.data
+    del minimal_event_dict['short_description']
     response2 = api_client.post(list_url, minimal_event_dict, format='json')
     assert response2.status_code == 400
-    assert 'description' in response2.data
+    assert 'non_field_errors' in response2.data
 
 
 @pytest.mark.django_db
@@ -334,19 +334,19 @@ def test_description_and_short_description_required_in_name_languages(api_client
 
     minimal_event_dict['name'] = {'fi': 'nimi', 'sv': 'namn'}
     minimal_event_dict['short_description'] = {'fi': 'lyhyt kuvaus'}
-    minimal_event_dict['description'] = {'sv': 'description in swedish'}
+    #minimal_event_dict['description'] = {'sv': 'description in swedish'}
 
     with translation.override('en'):
         response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
 
     # there should be only one error
     assert len(response.data['short_description']) == 1
-    assert len(response.data['description']) == 1
+    #assert len(response.data['description']) == 1
 
     assert (force_text(response.data['short_description']['sv']) ==
             'This field must be specified before an event is published.')
-    assert (force_text(response.data['description']['fi']) ==
-            'This field must be specified before an event is published.')
+    #assert (force_text(response.data['description']['fi']) ==
+    #        'This field must be specified before an event is published.')
 
 
 @pytest.mark.django_db
@@ -363,29 +363,29 @@ def test_short_description_cannot_exceed_160_chars(api_client, minimal_event_dic
 
 
 @pytest.mark.django_db
-def test_description_may_contain_html(api_client, minimal_event_dict, user):
+def test_short_description_may_contain_html(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
 
-    for lang in minimal_event_dict['description']:
-        minimal_event_dict['description'][lang] = ' '.join(settings.BLEACH_ALLOWED_TAGS)
+    for lang in minimal_event_dict['short_description']:
+        minimal_event_dict['short_description'][lang] = ' '.join(settings.BLEACH_ALLOWED_TAGS)
 
     response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 201
-    for lang in minimal_event_dict['description']:
-        assert response.data['description'][lang] == ' '.join(settings.BLEACH_ALLOWED_TAGS)
+    for lang in minimal_event_dict['short_description']:
+        assert response.data['short_description'][lang] == ' '.join(settings.BLEACH_ALLOWED_TAGS)
 
 
 @pytest.mark.django_db
-def test_description_may_only_contain_safe_tags(api_client, minimal_event_dict, user):
+def test_short_description_may_only_contain_safe_tags(api_client, minimal_event_dict, user):
     api_client.force_authenticate(user)
 
-    for lang in minimal_event_dict['description']:
-        minimal_event_dict['description'][lang] = '<script/>'
+    for lang in minimal_event_dict['short_description']:
+        minimal_event_dict['short_description'][lang] = '<script/>'
 
     response = api_client.post(reverse('event-list'), minimal_event_dict, format='json')
     assert response.status_code == 201
-    for lang in minimal_event_dict['description']:
-        assert response.data['description'][lang] != '<script/>'
+    for lang in minimal_event_dict['short_description']:
+        assert response.data['short_description'][lang] != '<script/>'
 
 
 @pytest.mark.django_db
