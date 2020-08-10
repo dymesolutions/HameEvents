@@ -37,7 +37,7 @@ def get_git_revision_hash() -> str:
 root = environ.Path(__file__) - 2  # two levels back in hierarchy
 env = environ.Env(
     DEBUG=(bool, False),
-    SYSTEM_DATA_SOURCE_ID=(str, 'tavastiaevents'),
+    SYSTEM_DATA_SOURCE_ID=(str, 'system'),
     LANGUAGES=(list, ['fi', 'sv', 'en', 'zh-hans', 'ru', 'ar']),
     DATABASE_URL=(str, 'postgis:///linkedevents'),
     TOKEN_AUTH_ACCEPTED_AUDIENCE=(str, ''),
@@ -63,8 +63,6 @@ env = environ.Env(
     MAIL_MAILGUN_DOMAIN=(str, ''),
     MAIL_MAILGUN_API=(str, ''),
     LIPPUPISTE_EVENT_API_URL=(str, None),
-    USE_DEFAULT_API_KEY=(bool, True),
-    DEFAULT_API_KEY=(str, 'tavastiaevents'),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -252,7 +250,8 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'events.renderers.JSONRenderer',
         'events.renderers.JSONLDRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+        #'rest_framework.renderers.BrowsableAPIRenderer',
+        'events.utils.BrowsableAPIRendererWithoutForms',
     ),
     'DEFAULT_PARSER_CLASSES': (
         'events.parsers.CamelCaseJSONParser',
@@ -265,7 +264,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'events.api_pagination.CustomPagination',
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+        #'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'events.auth.ApiKeyAuthentication',
@@ -430,8 +429,6 @@ AUTO_ENABLED_EXTENSIONS = env('AUTO_ENABLED_EXTENSIONS')
 INSTANCE_NAME = env('INSTANCE_NAME')
 
 # Tavastia Events
-USE_DEFAULT_API_KEY = env('USE_DEFAULT_API_KEY')
-DEFAULT_API_KEY = env('DEFAULT_API_KEY')
 DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
 
 # local_settings.py can be used to override environment-specific settings

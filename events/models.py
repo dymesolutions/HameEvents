@@ -243,11 +243,11 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-    def is_user_editable(self):
-        return self.data_source.user_editable
+    #def is_user_editable(self):
+    #    return self.data_source.user_editable
 
-    def is_user_edited(self):
-        return bool(self.data_source.user_editable and self.last_modified_by)
+    #def is_user_edited(self):
+    #    return bool(self.data_source.user_editable and self.last_modified_by)
 
 
 class Language(models.Model):

@@ -11,6 +11,7 @@ from rest_framework.exceptions import ParseError
 from events.models import Keyword, Place
 from events.sql import count_events_for_keywords, count_events_for_places
 
+from rest_framework.renderers import BrowsableAPIRenderer
 
 def convert_to_camelcase(s):
     return ''.join(word.title() if i else word for i, word in enumerate(
@@ -131,3 +132,17 @@ def get_fixed_lang_codes():
         lang_code = lang_code.replace('-', '_')  # to handle complex codes like e.g. zh-hans
         lang_codes.append(lang_code)
     return lang_codes
+
+class BrowsableAPIRendererWithoutForms(BrowsableAPIRenderer):
+    """Renders the browsable api, but excludes the forms."""
+
+    def get_context(self, *args, **kwargs):
+        ctx = super().get_context(*args, **kwargs)
+        ctx['display_edit_forms'] = False
+        return ctx
+
+    def show_form_for_method(self, view, method, request, obj):
+        return False
+
+    def get_rendered_html_form(self, data, view, method, request):
+        return ""

@@ -107,11 +107,18 @@ def get_serializer_for_model(model, version='v1'):
     return serializer
 
 
-def generate_id(namespace):
+# def generate_id(namespace):
+#     t = time.time() * 1000
+#     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
+#     postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
+#     return '{}:{}'.format(namespace, postfix)
+
+def generate_id():
     t = time.time() * 1000
     postfix = base64.b32encode(struct.pack(">Q", int(t)).lstrip(b'\x00'))
     postfix = postfix.strip(b'=').lower().decode(encoding='UTF-8')
-    return '{}:{}'.format(namespace, postfix)
+    return '{}'.format(postfix)
+    #return '{}:{}'.format(postfix)
 
 
 def parse_id_from_uri(uri):
@@ -137,28 +144,33 @@ def perform_id_magic_for(data):
     return data
 
 
+# def get_authenticated_data_source_and_publisher(request):
+#     # api_key takes precedence over user
+#     if isinstance(request.auth, ApiKeyAuth):
+#         data_source = request.auth.get_authenticated_data_source()
+#         publisher = data_source.owner
+#         if not publisher:
+#             raise PermissionDenied(_("Data source doesn't belong to any organization"))
+#     else:
+#         # objects *created* by api are marked coming from the system data source unless api_key is provided
+#         # we must optionally create the system data source here, as the settings may have changed at any time
+#         system_data_source_defaults = {'user_editable': True}
+#         data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
+#                                                                 defaults=system_data_source_defaults)
+#         # user organization is used unless api_key is provided
+#         user = request.user
+#         if isinstance(user, User):
+#             publisher = user.get_default_organization()
+#         else:
+#             publisher = None
+#         # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
+#         if publisher and publisher.replaced_by:
+#             publisher = publisher.replaced_by
+#     return data_source, publisher
+
 def get_authenticated_data_source_and_publisher(request):
-    # api_key takes precedence over user
-    if isinstance(request.auth, ApiKeyAuth):
-        data_source = request.auth.get_authenticated_data_source()
-        publisher = data_source.owner
-        if not publisher:
-            raise PermissionDenied(_("Data source doesn't belong to any organization"))
-    else:
-        # objects *created* by api are marked coming from the system data source unless api_key is provided
-        # we must optionally create the system data source here, as the settings may have changed at any time
-        system_data_source_defaults = {'user_editable': True}
-        data_source, created = DataSource.objects.get_or_create(id=settings.SYSTEM_DATA_SOURCE_ID,
-                                                                defaults=system_data_source_defaults)
-        # user organization is used unless api_key is provided
-        user = request.user
-        if isinstance(user, User):
-            publisher = user.get_default_organization()
-        else:
-            publisher = None
-        # no sense in doing the replacement check later, the authenticated publisher must be current to begin with
-        if publisher and publisher.replaced_by:
-            publisher = publisher.replaced_by
+    publisher = None
+    data_source = None
     return data_source, publisher
 
 
@@ -467,7 +479,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         # for post and put methods as well as field visibility, user information is needed
         self.method = self.request.method
         if 'user' in context:
-            self.user = context['user']
+            self.user = None #context['user']
         if 'admin_tree_ids' in context:
             self.admin_tree_ids = context['admin_tree_ids']
 
@@ -495,20 +507,20 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             return
         # post and put methods need further authentication
         self.data_source, self.publisher = get_authenticated_data_source_and_publisher(self.request)
-        if not self.publisher:
-            raise PermissionDenied(_("User doesn't belong to any organization"))
+        #if not self.publisher:
+        #    raise PermissionDenied(_("User doesn't belong to any organization"))
         # in case of bulk operations, the instance may be a huge queryset, already filtered by permission
         # therefore, we only do permission checks at the single instance level
-        if not isinstance(instance, QuerySet) and instance:
+        #if not isinstance(instance, QuerySet) and instance:
             # check permissions *before* validation
-            if isinstance(self.user, ApiKeyUser):
+            #if isinstance(self.user, ApiKeyUser):
                 # allow updating only if the api key matches instance data source
-                if not instance.data_source == self.data_source:
-                    raise PermissionDenied()
-            else:
+            #    if not instance.data_source == self.data_source:
+            #        raise PermissionDenied()
+            #else:
                 # without api key, the user will have to be admin
-                if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
-                    raise PermissionDenied()
+                #if not instance.is_user_editable() or not instance.can_be_edited_by(self.user):
+                #    raise PermissionDenied()
 
     def to_internal_value(self, data):
         for field in self.system_generated_fields:
@@ -629,8 +641,8 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
             raise PermissionDenied()
         if 'publisher' not in validated_data:
             validated_data['publisher'] = self.publisher
-        validated_data['created_by'] = self.user
-        validated_data['last_modified_by'] = self.user
+        validated_data['created_by'] = None #self.user
+        validated_data['last_modified_by'] = None #self.user
         try:
             instance = super().create(validated_data)
         except IntegrityError as error:
@@ -641,7 +653,7 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        validated_data['last_modified_by'] = self.user
+        validated_data['last_modified_by'] = None #self.user
 
         if 'id' in validated_data:
             if instance.id != validated_data['id']:
@@ -1040,11 +1052,11 @@ class PlaceCreateSerializer(TranslatedModelSerializer):
         if 'id' not in validated_data:
             validated_data['id'] = get_random_string(length=16, allowed_chars='0123456789')
 
-        if 'data_source' not in validated_data:
-            validated_data['data_source'] = DataSource.objects.get(id='tavastiaevents')
+        # if 'data_source' not in validated_data:
+        #     validated_data['data_source'] = DataSource.objects.get(id='tavastiaevents')
 
-        if 'publisher' not in validated_data:
-            validated_data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
+        # if 'publisher' not in validated_data:
+        #     validated_data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
 
         place = super().create(validated_data)
 
@@ -1414,11 +1426,11 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         data = super().validate(data)
 
         # Tavastia Events default data_source and publisher
-        if 'data_source' not in data:
-            data['data_source'] = DataSource.objects.get(id='tavastiaevents')
+        # if 'data_source' not in data:
+        #     data['data_source'] = DataSource.objects.get(id='tavastiaevents')
 
-        if 'publisher' not in data:
-            data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
+        # if 'publisher' not in data:
+        #     data['publisher'] = Organization.objects.get(id='tavastiaevents:00001')
 
         if 'publication_status' not in data:
             data['publication_status'] = PublicationStatus.PUBLIC
@@ -1542,7 +1554,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     def create(self, validated_data):
         # if id was not provided, we generate it upon creation:
         if 'id' not in validated_data:
-            validated_data['id'] = generate_id(self.data_source)
+            validated_data['id'] = generate_id() 
+            #generate_id(self.data_source)
 
         if 'images' not in validated_data:
             try:
@@ -1571,8 +1584,8 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
         links = validated_data.pop('external_links', [])
         videos = validated_data.pop('videos', [])
 
-        validated_data.update({'created_by': self.user,
-                               'last_modified_by': self.user,
+        validated_data.update({'created_by': None, #self.user,
+                               'last_modified_by': None, #self.user,
                                'created_time': Event.now(),  # we must specify creation time as we are setting id
                                'event_status': Event.Status.SCHEDULED,  # mark all newly created events as scheduled
                                })
@@ -2205,11 +2218,11 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         # Prevent changing an event that user does not have write permissions
         # For bulk update, the editable queryset is filtered in filter_queryset
         # method
-        if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
-                serializer.instance.publisher,
-                serializer.instance.publication_status,
-        ):
-            raise DRFPermissionDenied()
+        #if isinstance(serializer, EventSerializer) and not self.request.user.can_edit_event(
+        #        serializer.instance.publisher,
+        #        serializer.instance.publication_status,
+        #):
+        #    raise DRFPermissionDenied()
 
         # Prevent changing existing events to a state that user doe snot have write permissions
         if isinstance(serializer.validated_data, list):
@@ -2221,8 +2234,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
             org = self.organization
             if hasattr(event_data, 'publisher'):
                 org = event_data['publisher']
-            if not self.request.user.can_edit_event(org, event_data['publication_status']):
-                raise DRFPermissionDenied()
+            #if not self.request.user.can_edit_event(org, event_data['publication_status']):
+            #    raise DRFPermissionDenied()
 
         super().perform_update(serializer)
 
@@ -2240,12 +2253,12 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         else:
             event_data_list = [serializer.validated_data]
 
-        for event_data in event_data_list:
-            org = self.organization
-            if hasattr(event_data, 'publisher'):
-                org = event_data['publisher']
-            if not self.request.user.can_edit_event(org, event_data['publication_status']):
-                raise DRFPermissionDenied()
+        #for event_data in event_data_list:
+        #    org = self.organization
+        #    if hasattr(event_data, 'publisher'):
+        #        org = event_data['publisher']
+        #    if not self.request.user.can_edit_event(org, event_data['publication_status']):
+        #        raise DRFPermissionDenied()
 
         super().perform_create(serializer)
 
@@ -2254,8 +2267,8 @@ class EventViewSet(JSONAPIViewMixin, BulkModelViewSet, viewsets.ReadOnlyModelVie
         return super().destroy(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
-            raise DRFPermissionDenied()
+        #if not self.request.user.can_edit_event(instance.publisher, instance.publication_status):
+        #    raise DRFPermissionDenied()
         # Tavastia Events, Check if password is correct
         if instance.pin != self.request.POST.get('pin', None):
             raise DRFPermissionDenied(_('Incorrect PIN.'))
