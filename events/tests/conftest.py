@@ -207,7 +207,7 @@ def make_minimal_event_dict(make_keyword_id):
                     'info_url': {'en': URL, 'sv': URL, 'fi': URL}
                 }
             ],
-            'publisher': organization.id,
+            #'publisher': None, #organization.id,
             'pin': '1234a',
             'accessible': False,
             'provider_email': 'example@example.com'
@@ -481,8 +481,8 @@ def language_id(language):
 def make_complex_event_dict(make_keyword_id):
     def _make_complex_event_dict(data_source, organization, location_id, languages):
         return {
-            'publisher': organization.id,
-            'data_source': data_source.id,
+            #'publisher': None, #organization.id,
+            #'data_source': data_source.id,
             'name': {'en': TEXT_EN, 'sv': TEXT_SV, 'fi': TEXT_FI},
             'event_status': 'EventScheduled',
             'location': {'@id': location_id},

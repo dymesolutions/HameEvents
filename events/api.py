@@ -592,28 +592,28 @@ class LinkedEventsSerializer(TranslatedModelSerializer, MPTTModelSerializer):
         return value
 
     def validate_publisher(self, value):
-        if value:
-            # user might be admin *or* regular user
-            if value not in (set(self.user.get_admin_organizations_and_descendants())
-                             | set(map(lambda x: getattr(x, 'replaced_by'),
-                                   self.user.get_admin_organizations_and_descendants()))
-                             | set(self.user.organization_memberships.all())
-                             | set(map(lambda x: getattr(x, 'replaced_by'),
-                                   self.user.organization_memberships.all()))):
-                raise serializers.ValidationError(
-                    {'publisher': _(
-                        "Setting publisher to %(given)s " +
-                        " is not allowed for this user. The publisher" +
-                        " must be left blank or set to %(required)s or any other organization"
-                        " the user belongs to.") %
-                        {'given': str(value),
-                         'required': str(self.publisher
-                                         if not self.publisher.replaced_by
-                                         else self.publisher.replaced_by)}})
-            if value.replaced_by:
-                # for replaced organizations, we automatically update to the current organization
-                # even if the POST/PUT uses the old id
-                return value.replaced_by
+        # if value:
+        #     # user might be admin *or* regular user
+        #     if value not in (set(self.user.get_admin_organizations_and_descendants())
+        #                      | set(map(lambda x: getattr(x, 'replaced_by'),
+        #                            self.user.get_admin_organizations_and_descendants()))
+        #                      | set(self.user.organization_memberships.all())
+        #                      | set(map(lambda x: getattr(x, 'replaced_by'),
+        #                            self.user.organization_memberships.all()))):
+        #         raise serializers.ValidationError(
+        #             {'publisher': _(
+        #                 "Setting publisher to %(given)s " +
+        #                 " is not allowed for this user. The publisher" +
+        #                 " must be left blank or set to %(required)s or any other organization"
+        #                 " the user belongs to.") %
+        #                 {'given': str(value),
+        #                  'required': str(self.publisher
+        #                                  if not self.publisher.replaced_by
+        #                                  else self.publisher.replaced_by)}})
+        #     if value.replaced_by:
+        #         # for replaced organizations, we automatically update to the current organization
+        #         # even if the POST/PUT uses the old id
+        #         return value.replaced_by
         return value
 
     def validate(self, data):
@@ -1405,8 +1405,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
 
     def validate_id(self, value):
         if value:
-            id_data_source_prefix = value.split(':', 1)[0]
-            if not id_data_source_prefix == self.data_source.id:
+            #id_data_source_prefix = value.split(':', 1)[0]
+            id_data_source_prefix = ''
+            if not id_data_source_prefix == '':#self.data_source.id:
                 # the event might be from another data source by the same organization, and we are only editing it
                 if self.instance:
                     if self.publisher.owned_systems.filter(id=id_data_source_prefix).exists():
