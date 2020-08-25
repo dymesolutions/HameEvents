@@ -269,9 +269,11 @@ For an example extension implementation, see [course extension](extension_course
 
 Extra required libraries
 
+'''python
 django_extra_fields 3.0.0
 django_extensions
 django_storages[azure] 1.9.1
+'''
 
 Installing the Tavastia events browsable API templates
 
