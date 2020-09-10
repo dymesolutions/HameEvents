@@ -1338,9 +1338,9 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
     external_links = EventLinkSerializer(many=True, required=False)
     offers = OfferSerializer(many=True, required=False)
     data_source = serializers.PrimaryKeyRelatedField(queryset=DataSource.objects.all(),
-                                                     required=False)
+                                                     required=False, allow_null=True)
     publisher = serializers.PrimaryKeyRelatedField(queryset=Organization.objects.all(),
-                                                   required=False)
+                                                   required=False, allow_null=True)
     sub_events = JSONLDRelatedField(serializer='EventSerializer',
                                     required=False, view_name='event-detail',
                                     many=True, queryset=Event.objects.filter(deleted=False), source='filter_deleted')
