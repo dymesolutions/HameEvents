@@ -42,6 +42,8 @@ from munigeo.models import AdministrativeDivision
 from notifications.models import render_notification_template, NotificationType, NotificationTemplateException
 from smtplib import SMTPException
 
+from django.core.management import call_command
+
 logger = logging.getLogger(__name__)
 
 User = settings.AUTH_USER_MODEL
@@ -645,6 +647,7 @@ class Event(MPTTModel, BaseModel, SchemalessFieldMixin, ReplacedByMixin):
             Place.objects.filter(id=old_location.id).update(n_events_changed=True)
         if old_location and self.location and old_location != self.location:
             Place.objects.filter(id__in=(old_location.id, self.location.id)).update(n_events_changed=True)
+            call_command('update_n_events')
 
         # send notifications
         if old_publication_status == PublicationStatus.DRAFT and self.publication_status == PublicationStatus.PUBLIC:
@@ -756,6 +759,8 @@ def keyword_added_or_removed(sender, model=None,
         if model is Event:
             instance.n_events_changed = True
             instance.save(update_fields=("n_events_changed",))
+
+        call_command('update_n_events')
 
 
 class Offer(models.Model, SimpleValueMixin):
