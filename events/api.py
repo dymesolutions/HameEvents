@@ -1774,6 +1774,9 @@ class EventOrderingFilter(LinkedEventsOrderingFilter):
             ordering = []
         if 'duration' in ordering:
             queryset = queryset.extra(select={'duration': 'end_time - start_time'})
+        if 'multi_last' in ordering:
+            queryset = queryset.extra(select={'multi_last': 'end_time' - 'start_time'})
+            queryset = queryset.order_by('multi_last', 'start_time')
         return queryset
 
 
