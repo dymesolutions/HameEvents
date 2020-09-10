@@ -1568,14 +1568,17 @@ class EventSerializer(LinkedEventsSerializer, GeoModelAPIView):
                 split_string = validated_data['start_time']#.split('-')
                 month_number = str(split_string.month)
 
+                img = None
+                #img = [Image.objects.get(id=4089)]
                 if month_number in autumn:
-                    validated_data['images'] = Image.objects.get(id=4089)
+                    img = [Image.objects.get(id=4089)]
                 elif month_number in winter:
-                    validated_data['images'] = Image.objects.get(id=2570)
+                    img = [Image.objects.get(id=2570)]
                 elif month_number in spring:
-                    validated_data['images'] = Image.objects.get(id=3387)
+                    img = [Image.objects.get(id=3387)]
                 else:
-                    validated_data['images'] = Image.objects.get(id=4090)
+                    img = [Image.objects.get(id=4090)]
+                validated_data['images'] = img
 
             except Image.DoesNotExist:
                 pass
