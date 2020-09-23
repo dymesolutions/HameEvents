@@ -55,27 +55,27 @@ def message_event(request):
             return JsonResponse(responseData, status=400)
 
         if int(message_code) == 100:
-            email_subject = 'Tavastia Events: Tapahtumasi tiedoissa mahdollinen virhe'
+            email_subject = 'Häme Events: Tapahtumasi tiedoissa mahdollinen virhe'
             email_message = 'Tapahtuman tiedoissa on mahdollisesti virhe. Pyydämme tarkistamaan tiedot.\nTapahtuman nimi {0}\nTapahtuman id: {1}\n'.format(event.id, event.name)
             if message != '' and message != None:
                 email_message += '\nIlmoituksen mukana lähetettiin seuraava lisätieto: \n' 
                 email_message += message
-            email_to = [event.provider_email, 'admin@tavastiaevents.fi']
+            email_to = [event.provider_email, 'hameevents@hame.fi']
 
         elif int(message_code) == 200:
-            email_subject = 'Tavastia Events: Tapahtuma ilmoitettu'
+            email_subject = 'Häme Events: Tapahtuma ilmoitettu'
             email_message = 'Tapahtumasta {0}: {1} on tehty ilmoitus käyttöehtojen vastaisena\n'.format(event.id, event.name)
             if message != '' and message != None:
                 email_message += '\nIlmoituksen mukana lähetettiin seuraava lisätieto: \n' 
                 email_message += message
 
-            email_to = ['admin@tavastiaevents.fi']
+            email_to = ['hameevents@hame.fi']
         
         elif int(message_code) == 300:
-            email_subject = 'Tavastia Events: Tapahtumaan liittyvä PIN-koodi'
+            email_subject = 'Häme Events: Tapahtumaan liittyvä PIN-koodi'
             email_message = 'Tässä pyytämäsi tapahtumaan {0}: {1} liitetty PIN-koodi. \nPIN-koodi: {2}'.format(event.id, event.name, event.pin)
 
-            email_to = [event.provider_email, 'admin@tavastiaevents.fi']
+            email_to = [event.provider_email, 'hameevents@hame.fi']
 
         else:
             responseData = {
