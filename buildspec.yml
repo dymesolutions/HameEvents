@@ -8,10 +8,10 @@ phases:
   build:
     commands:
       - ./install_gdal_ubuntu.sh
-      - pip install virtualenv
       - INSTALL_BASE=$CODEBUILD_SRC_DIR
       - virtualenv -p python3 $INSTALL_BASE/venv
       - aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin $REGISTRY_ID.dkr.ecr.eu-west-1.amazonaws.com
+      - pip install GDAL
       - pip install -r requirements.txt
       - docker build -f docker/django/Dockerfile --target production -t $IMAGE_NAME .
       - docker tag $IMAGE_NAME:latest $REPOSITORY_URL:latest
