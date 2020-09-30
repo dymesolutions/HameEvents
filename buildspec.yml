@@ -7,6 +7,7 @@ phases:
       docker: 18
   build:
     commands:
+      - ./install_gdal_ubuntu.sh
       - pip install virtualenv
       - INSTALL_BASE=$CODEBUILD_SRC_DIR
       - virtualenv -p python3 $INSTALL_BASE/venv
