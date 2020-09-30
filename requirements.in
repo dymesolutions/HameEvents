@@ -1,3 +1,4 @@
+boto3
 bleach
 django-allauth
 django-anymail
@@ -16,6 +17,9 @@ django-munigeo>=0.2.23,<0.3
 django-orghierarchy>=0.1.23
 django-reversion
 django>=2.2,<3.0
+django_extensions
+django_extra_fields
+django_storages
 djangorestframework
 djangorestframework-bulk
 djangorestframework-gis
