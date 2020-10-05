@@ -18,5 +18,6 @@ phases:
       - docker tag $IMAGE_NAME:latest $REPOSITORY_URL:latest
       - docker push $REPOSITORY_URL:latest
       - aws ecs update-service --cluster hameevents-api --service $IMAGE_NAME --force-new-deployment --region eu-west-1
+      - mv local_settings.py local_settings.py.prod
       - python manage.py collectstatic
       - aws s3 sync --cache-control 'public, max-age=3600' --no-progress static/ s3://hame-events-client/$STAGE/static/
