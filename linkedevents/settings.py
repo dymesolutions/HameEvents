@@ -428,8 +428,8 @@ AUTO_ENABLED_EXTENSIONS = env('AUTO_ENABLED_EXTENSIONS')
 # shown in the browsable API
 INSTANCE_NAME = env('INSTANCE_NAME')
 
-# Tavastia Events
-DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+# Häme Events
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

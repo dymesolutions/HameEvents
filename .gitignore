@@ -155,3 +155,7 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python,macos
+
+static/
+.vscode/
+venv/

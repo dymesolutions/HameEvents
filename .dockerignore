@@ -14,7 +14,10 @@
 !linkedevents*
 !locale*
 !multilingual_haystack*
+!notifications*
 !templates*
+!tavastiaevents*
+!.prod*
 
 #################################################
 # Whitelisted files
