@@ -2025,6 +2025,24 @@ def _filter_event_queryset(queryset, params, srs=None):
         val = val.split(',')
         queryset = queryset.filter(location__postal_code__in=val)
 
+    # Filter by address_locality_fi, multiple locations separated by comma
+    val = params.get('address_locality_fi', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_fi__in=val)
+
+    # Filter by address_locality_sv, multiple locations separated by comma
+    val = params.get('address_locality_sv', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_sv__in=val)
+
+    # Filter by address_locality_en, multiple locations separated by comma
+    val = params.get('address_locality_en', None)
+    if val:
+        val = val.split(',')
+        queryset = queryset.filter(location__address_locality_en__in=val)
+
     # API Exception for multi day search
     class InvalidMultiDayParametersException(APIException):
         status_code = 400
