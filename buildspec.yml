@@ -14,7 +14,9 @@ phases:
       - aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin $REGISTRY_ID.dkr.ecr.eu-west-1.amazonaws.com
       - pip install GDAL==$(gdal-config --version | awk -F'[.]' '{print $1"."$2}')
       - pip install -r requirements.txt
+      - mv local_settings.py local_settings.py.prod
       - python manage.py install_templates tavastiaevents
+      - mv local_settings.py.prod local_settings.py
       - docker build -f docker/django/Dockerfile --target production -t $IMAGE_NAME .
       - docker tag $IMAGE_NAME:latest $REPOSITORY_URL:latest
       - docker push $REPOSITORY_URL:latest
